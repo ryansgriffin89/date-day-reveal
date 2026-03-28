@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Back to the Bucket</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080808;
+      --bg-2: #121212;
+      --panel: rgba(17, 17, 17, 0.96);
+      --panel-2: rgba(27, 27, 27, 0.96);
+      --text: #f5f0e8;
+      --muted: #b7b1aa;
+      --red: #cb1e1e;
+      --red-deep: #7e1111;
+      --gold: #efc14d;
+      --gold-soft: rgba(239, 193, 77, 0.22);
+      --line: rgba(255,255,255,0.08);
+      --green: #9ce8ad;
+      --shadow: 0 24px 70px rgba(203, 30, 30, 0.22);
+      --radius: 22px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      min-height: 100dvh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top center, rgba(203,30,30,0.20), transparent 32%),
+        radial-gradient(circle at bottom left, rgba(239,193,77,0.08), transparent 24%),
+        linear-gradient(180deg, #050505 0%, #101010 100%);
+      overflow-x: hidden;
+      padding:
+        max(14px, env(safe-area-inset-top))
+        max(14px, env(safe-area-inset-right))
+        max(22px, env(safe-area-inset-bottom))
+        max(14px, env(safe-area-inset-left));
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .stage-light,
+    .stage-light-right,
+    .marquee-dots,
+    .noise {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .stage-light,
+    .stage-light-right {
+      inset: auto;
+      top: -12%;
+      width: 220px;
+      height: 132vh;
+      filter: blur(22px);
+      opacity: 0.72;
+      background: linear-gradient(180deg, rgba(203,30,30,0.42), rgba(203,30,30,0.02));
+    }
+
+    .stage-light {
+      left: 4%;
+      transform: rotate(8deg);
+    }
+
+    .stage-light-right {
+      right: 4%;
+      transform: rotate(-8deg);
+    }
+
+    .marquee-dots {
+      background-image: radial-gradient(circle, rgba(239,193,77,0.14) 1px, transparent 1.6px);
+      background-size: 22px 22px;
+      opacity: 0.15;
+    }
+
+    .noise {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      mix-blend-mode: soft-light;
+      opacity: 0.35;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 840px;
+      background: linear-gradient(180deg, rgba(16,16,16,0.98), rgba(8,8,8,0.99));
+      border: 1px solid rgba(239,193,77,0.20);
+      border-top: 4px solid var(--red);
+      border-radius: clamp(18px, 4vw, 26px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin: 6px 0;
+    }
+
+    .wrap::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.03), transparent 30%);
+      pointer-events: none;
+    }
+
+    .marquee {
+      position: relative;
+      z-index: 1;
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(239,193,77,0.12);
+      background:
+        linear-gradient(180deg, rgba(239,193,77,0.10), rgba(255,255,255,0.02)),
+        linear-gradient(90deg, rgba(203,30,30,0.26), rgba(239,193,77,0.06), rgba(203,30,30,0.26));
+    }
+
+    .marquee-inner {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px 18px;
+      text-align: center;
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1.9px;
+      text-transform: uppercase;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      padding: clamp(20px, 4vw, 34px);
+    }
+
+    .step {
+      display: none;
+      animation: fadeIn .34s ease;
+    }
+
+    .step.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .eyebrow {
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: clamp(30px, 7.3vw, 44px);
+      line-height: 0.98;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: clamp(14px, 3.8vw, 16px);
+      line-height: 1.72;
+      margin-bottom: 22px;
+      max-width: 700px;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .pill,
+    .step-count {
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      color: #ffd8d8;
+      border: 1px solid rgba(203,30,30,0.40);
+      background: rgba(203,30,30,0.14);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+    }
+
+    .step-count {
+      color: var(--muted);
+    }
+
+    .progress {
+      width: 100%;
+      height: 7px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .progress-fill {
+      width: 25%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), var(--gold));
+      border-radius: inherit;
+      transition: width .25s ease;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(28,28,28,0.98), rgba(17,17,17,0.98));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+
+    .card-label {
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .card-value {
+      font-size: clamp(20px, 5vw, 24px);
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+    .card-sub {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .callout,
+    .details,
+    .agenda {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+    }
+
+    .callout {
+      border-left: 4px solid var(--gold);
+      padding: 18px;
+      line-height: 1.76;
+      color: #ece7de;
+      margin-bottom: 22px;
+    }
+
+    .callout strong,
+    .details strong { color: #fff; }
+
+    .section-kicker {
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1.7px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .btn,
+    .btn-secondary,
+    .choice-btn {
+      appearance: none;
+      border: none;
+      border-radius: 18px;
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+      font-weight: 900;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:hover,
+    .btn-secondary:hover,
+    .choice-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn:active,
+    .btn-secondary:active,
+    .choice-btn:active {
+      transform: translateY(0);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, var(--red), var(--red-deep));
+      color: white;
+      font-size: 15px;
+      letter-spacing: 0.4px;
+      box-shadow: 0 14px 30px rgba(203, 30, 30, 0.25);
+    }
+
+    .btn.secondary-tone {
+      background: linear-gradient(135deg, #b72121, #6f1212);
+    }
+
+    .btn-secondary {
+      flex: 1 1 220px;
+      padding: 15px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text);
+      font-size: 13px;
+      min-height: 54px;
+    }
+
+    .choices {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .choice-btn {
+      text-align: left;
+      padding: 18px 16px;
+      min-height: 132px;
+      background: linear-gradient(180deg, rgba(32,32,32,0.98), rgba(18,18,18,0.98));
+      border: 1px solid rgba(239,193,77,0.14);
+      color: var(--text);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+    }
+
+    .choice-btn:hover {
+      border-color: rgba(239,193,77,0.34);
+      box-shadow: 0 18px 32px rgba(0,0,0,0.2);
+    }
+
+    .choice-emoji {
+      font-size: 29px;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .choice-title {
+      font-size: 16px;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .choice-sub {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.48;
+    }
+
+    .selection-box {
+      background:
+        linear-gradient(180deg, rgba(203,30,30,0.16), rgba(255,255,255,0.03));
+      border: 1px solid rgba(239,193,77,0.2);
+      border-radius: 18px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    .selection-label {
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .selection-value {
+      font-size: clamp(22px, 5vw, 26px);
+      font-weight: 900;
+      line-height: 1.25;
+    }
+
+    .poster {
+      min-height: 196px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-align: center;
+      padding: 22px;
+      border-radius: 20px;
+      border: 1px solid rgba(239,193,77,0.16);
+      background:
+        radial-gradient(circle at top center, rgba(203,30,30,0.30), transparent 36%),
+        linear-gradient(180deg, rgba(28,28,28,0.98), rgba(15,15,15,0.99));
+      box-shadow: inset 0 0 26px rgba(0,0,0,0.34);
+      margin-bottom: 18px;
+    }
+
+    .poster-emoji {
+      font-size: clamp(52px, 12vw, 76px);
+      line-height: 1;
+    }
+
+    .poster-title {
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .details {
+      border-left: 4px solid var(--red);
+      padding: 18px;
+      line-height: 1.76;
+      color: #ece7de;
+      margin-bottom: 20px;
+    }
+
+    .nav-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .agenda {
+      padding: 10px 18px;
+    }
+
+    .agenda-item {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 16px;
+      align-items: start;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .agenda-item:last-child { border-bottom: none; }
+
+    .agenda-time {
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .agenda-text {
+      font-size: 15px;
+      line-height: 1.68;
+      color: #f0ece5;
+    }
+
+    .locked {
+      margin-top: 20px;
+      padding: 18px;
+      text-align: center;
+      border-radius: 18px;
+      background: rgba(0,145,55,0.12);
+      border: 1px solid rgba(98,214,129,0.26);
+      color: var(--green);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .tiny-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    .footer-cta {
+      position: sticky;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      z-index: 3;
+      margin-top: 18px;
+      padding-top: 6px;
+    }
+
+    .footer-cta .btn {
+      box-shadow: 0 18px 34px rgba(203, 30, 30, 0.28);
+    }
+
+    @media (max-width: 860px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .content { padding: 22px 18px; }
+      .choices { grid-template-columns: 1fr; }
+      .agenda-item { grid-template-columns: 1fr; gap: 7px; }
+      .nav-row { flex-direction: column; }
+      .btn-secondary, .btn { width: 100%; }
+      .poster { min-height: 170px; }
+      .stage-light, .stage-light-right { width: 150px; }
+      .marquee-inner { gap: 8px 12px; }
+    }
+
+    @media (max-width: 420px) {
+      body { padding-inline: max(10px, env(safe-area-inset-left)); }
+      .content { padding: 18px 14px 20px; }
+      .choice-btn { min-height: 124px; padding: 16px 14px; }
+      .callout, .details, .card, .selection-box, .agenda { border-radius: 16px; }
+      .btn, .btn-secondary { min-height: 54px; }
+      .agenda { padding: 8px 14px; }
+      .agenda-text { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage-light"></div>
+  <div class="stage-light-right"></div>
+  <div class="marquee-dots"></div>
+  <div class="noise"></div>
+
+  <main class="wrap">
+    <div class="marquee">
+      <div class="marquee-inner">
+        <span>Kill Tony Night</span>
+        <span>Back to the Bucket</span>
+        <span>Hotel Reset</span>
+        <span>FireHouse</span>
+        <span>Main Event</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <section class="step active" id="step1">
+        <div class="eyebrow">Cold Open</div>
+        <h1>Back To<br>The Bucket</h1>
+        <p class="subtitle">
+          Alright, so here’s the move. I didn’t want to just say “hey, we’re doing dinner and Kill Tony.”
+          That felt way too plain. So I made the whole day out like a lineup. Little daytime fun, hotel reset,
+          FireHouse, then Kill Tony to close it out like the headliner.
+        </p>
+
+        <div class="top-row">
+          <div class="pill">🎤 Tonight's Headliners: You + Me</div>
+          <div class="step-count">Step 1 / 4</div>
+        </div>
+        <div class="progress"><div class="progress-fill" style="width:25%"></div></div>
+
+        <div class="cards">
+          <div class="card">
+            <div class="card-label">Wheels Up</div>
+            <div class="card-value">11:00 AM</div>
+            <div class="card-sub">Leave Saginaw and get the day rolling with a quick lunch.</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Reset</div>
+            <div class="card-value">La Quinta</div>
+            <div class="card-sub">Drop bags, breathe for a minute, and switch from daytime set to night mode.</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Headliner</div>
+            <div class="card-value">Kill Tony</div>
+            <div class="card-sub">The whole day builds up to the main event later that night.</div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="section-kicker">How this works</div>
+          Here’s the deal. We leave Saginaw, grab a quick lunch, and then <strong>you get the bucket pull</strong>
+          for the daytime part of the date. You pick what sounds the most fun, we go do that, then head to
+          La Quinta, throw our stuff down, chill for a bit, hit FireHouse for dinner, drinks, and coffee,
+          and then it’s off to Kill Tony.<br><br>
+          Basically: <strong>fun first, little reset, food and drinks, then chaos and comedy.</strong>
+        </div>
+
+        <div class="footer-cta">
+          <button class="btn" onclick="goToStep(2)">Back To The Bucket</button>
+        </div>
+      </section>
+
+      <section class="step" id="step2">
+        <div class="eyebrow">Bucket Pull Round</div>
+        <h1>Pick The Daytime Set</h1>
+        <p class="subtitle">
+          Before the headliner tonight, you get to call the daytime feature. Pick whichever one feels the most like us — or hit the bucket pull and let a blind draw make the call.
+        </p>
+
+        <div class="top-row">
+          <div class="pill">🔥 Crowd Work: Your Call</div>
+          <div class="step-count">Step 2 / 4</div>
+        </div>
+        <div class="progress"><div class="progress-fill" style="width:50%"></div></div>
+
+        <div class="choices" id="choiceGrid"></div>
+      </section>
+
+      <section class="step" id="step3">
+        <div class="eyebrow">Set Locked</div>
+        <h1>Alright, We’re Doing This</h1>
+        <p class="subtitle">
+          Nice. That’s the daytime feature before the hotel reset, FireHouse stop, and the main event later tonight.
+        </p>
+
+        <div class="top-row">
+          <div class="pill">✅ Lineup Confirmed</div>
+          <div class="step-count">Step 3 / 4</div>
+        </div>
+        <div class="progress"><div class="progress-fill" style="width:75%"></div></div>
+
+        <div class="selection-box">
+          <div class="selection-label">Daytime Feature</div>
+          <div class="selection-value" id="selectionValue">—</div>
+        </div>
+
+        <div class="poster">
+          <div class="poster-emoji" id="posterEmoji">🎤</div>
+          <div class="poster-title">Tonight's Featured Set</div>
+        </div>
+
+        <div class="details" id="selectionDetails">
+          Loading your daytime feature...
+        </div>
+
+        <div class="nav-row">
+          <button class="btn-secondary" onclick="goToStep(2)">Change Pick</button>
+          <button class="btn secondary-tone" onclick="renderAgenda(); goToStep(4);">Show The Full Lineup</button>
+        </div>
+      </section>
+
+      <section class="step" id="step4">
+        <div class="eyebrow">Tonight's Full Lineup</div>
+        <h1>The Full Bucket Lineup</h1>
+        <p class="subtitle">
+          Here’s the whole run of show from wheels up in Saginaw all the way to us getting to Kill Tony.
+        </p>
+
+        <div class="top-row">
+          <div class="pill">🎟️ Mothership Energy Activated</div>
+          <div class="step-count">Step 4 / 4</div>
+        </div>
+        <div class="progress"><div class="progress-fill" style="width:100%"></div></div>
+
+        <div class="agenda" id="agendaList"></div>
+
+        <div class="locked">✔ Back To The Bucket Is Locked In</div>
+        <div class="tiny-note">
+          Only thing left now is for us to go have a damn good time.
+        </div>
+
+        <div class="nav-row" style="margin-top: 18px;">
+          <button class="btn-secondary" onclick="goToStep(2)">Pick A Different Daytime Set</button>
+          <button class="btn" onclick="resetAll()">Run It Back</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const activities = {
+      goKarts: {
+        name: '🏎️ Go-Karts',
+        venue: 'K1 Speed',
+        short: 'Go-Karts at K1 Speed',
+        emoji: '🏎️',
+        details: 'Fast, competitive, and just enough chaos to make it fun. This is the full-send option if you want to talk a little trash and get the day going strong before the hotel and the show.',
+        card: 'High-speed laps, leaderboard energy, and top-tier trash talk potential.'
+      },
+      targetPractice: {
+        name: '🎯 Range',
+        venue: 'Shoot Smart',
+        short: 'Target Practice at the Range',
+        emoji: '🎯',
+        details: 'A cool, locked-in option with a little edge to it. Clean lanes, real competition, and strong “don’t miss” energy if you want something a little more dialed in.',
+        card: 'Precision, focus, and a little “let’s see who is actually good at this.”'
+      },
+      arcade: {
+        name: '🕹️ Arcade',
+        venue: 'Retro Arcade',
+        short: 'Arcade Session',
+        emoji: '🕹️',
+        details: 'Classic games, air hockey, dumb little side quests, and easy fun. This is the playful pick if you want to keep it light before we switch into hotel, drinks, and show mode.',
+        card: 'Retro energy, easy laughs, and absolutely no pressure.'
+      },
+      escapeRoom: {
+        name: '🔓 Escape Room',
+        venue: 'Escape Room Venue',
+        short: 'Escape Room Challenge',
+        emoji: '🔓',
+        details: 'Teamwork, clues, pressure, and the chance to prove we are either brilliant or absolute idiots under a clock. Either way, it would be fun.',
+        card: 'Puzzles, teamwork, and a very real chance one of us starts bossing the other around.'
+      },
+      rageRoom: {
+        name: '💥 Rage Room',
+        venue: 'Smash Therapy',
+        short: 'Rage Room Session',
+        emoji: '💥',
+        details: 'Suit up and break stuff. This is the unhinged pick if you want to do something ridiculous and leave with a story.',
+        card: 'Pure chaos, stress relief, and a story we would absolutely be laughing about later.'
+      },
+      mysteryBox: {
+        name: '🪣 Bucket Pull',
+        venue: 'Blind Draw',
+        short: 'Bucket Pull Draw',
+        emoji: '🪣',
+        details: 'This is the blind draw. Instead of picking, we let the bucket decide and it randomly pulls one of the real daytime options for us.',
+        card: 'Blind draw from the bucket. No cheating, no peeking, just let the card decide.'
+      }
+    };
+
+    let selectedKey = null;
+
+    function goToStep(stepNumber) {
+      document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+      document.getElementById(`step${stepNumber}`).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function buildChoices() {
+      const grid = document.getElementById('choiceGrid');
+      const order = ['goKarts', 'targetPractice', 'arcade', 'escapeRoom', 'rageRoom', 'mysteryBox'];
+
+      grid.innerHTML = order.map(key => {
+        const item = activities[key];
+        return `
+          <button class="choice-btn" onclick="selectActivity('${key}')">
+            <span class="choice-emoji">${item.emoji}</span>
+            <div class="choice-title">${item.name}</div>
+            <div class="choice-sub"><strong>${item.venue}</strong><br>${item.card}</div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectActivity(key) {
+      let resolvedKey = key;
+
+      if (key === 'mysteryBox') {
+        const pool = ['goKarts', 'targetPractice', 'arcade', 'escapeRoom', 'rageRoom'];
+        resolvedKey = pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      selectedKey = resolvedKey;
+      const item = activities[resolvedKey];
+
+      document.getElementById('selectionValue').textContent = key === 'mysteryBox'
+        ? `🪣 Bucket Pull: ${item.short}`
+        : item.name;
+      document.getElementById('posterEmoji').textContent = key === 'mysteryBox' ? '🪣' : item.emoji;
+      document.getElementById('selectionDetails').innerHTML = key === 'mysteryBox'
+        ? `
+          <strong>Bucket Pull Result</strong><br>
+          🪣 Blind draw from the bucket<br><br>
+          No cheating. No peeking. The bucket made the call and pulled <strong>${item.short}</strong>. That’s the daytime set.
+        `
+        : `
+          <strong>${item.short}</strong><br>
+          📍 ${item.venue}<br><br>
+          ${item.details}
+        `;
+
+      goToStep(3);
+    }
+
+    function renderAgenda() {
+      const agenda = document.getElementById('agendaList');
+      const item = selectedKey ? activities[selectedKey] : null;
+      const mainEventText = item ? `${item.short}` : 'Daytime Main Event';
+
+      const entries = [
+        ['11:00 AM', '🚗 Wheels up from Saginaw.'],
+        ['11:45 AM', '🍽️ Quick, light lunch.'],
+        ['1:00 PM - 3:30 PM', `${item ? item.emoji : '🎯'} ${mainEventText}`],
+        ['3:30 PM', '🏨 Check into La Quinta, drop bags, and chill.'],
+        ['4:45 PM', '🍴 Dinner, drinks, and coffee at FireHouse Gastro Park.'],
+        ['6:00 PM', '🎤 Arrive at the venue for Kill Tony.']
+      ];
+
+      agenda.innerHTML = entries.map(([time, text]) => `
+        <div class="agenda-item">
+          <div class="agenda-time">${time}</div>
+          <div class="agenda-text">${text}</div>
+        </div>
+      `).join('');
+    }
+
+    function resetAll() {
+      selectedKey = null;
+      document.getElementById('selectionValue').textContent = '—';
+      document.getElementById('posterEmoji').textContent = '🎤';
+      document.getElementById('selectionDetails').textContent = 'Loading your daytime feature...';
+      goToStep(1);
+    }
+
+    buildChoices();
+  </script>
+</body>
+</html>
